@@ -15,13 +15,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { VirusScanFileValidator } from './virus-scan.file-validator';
 import { AuthRequest } from '../../auth/auth-request';
-import { FilesService } from '../infrastructure/files.service';
+import { MediaService } from '../infrastructure/media.service';
 import { Response } from 'express';
 import { Media } from '../domain/media';
 
-@Controller('files')
-export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+@Controller('media')
+export class MediaController {
+  constructor(private readonly filesService: MediaService) {}
 
   @Post('profileImage')
   @UseInterceptors(
@@ -77,15 +77,20 @@ export class FilesController {
     @Param('upi') upi: string,
     @Param('dataFieldId') dataFieldId: string,
     @Req() req: AuthRequest,
-  ): Promise<void> {
-    await this.filesService.uploadFileOfProductPassport(
-      file.filename,
+  ): Promise<{
+    mediaId: string;
+  }> {
+    const media = await this.filesService.uploadFileOfProductPassport(
+      file.originalname,
       file.buffer,
       dataFieldId,
       upi,
       req.authContext.keycloakUser.sub,
       orgId,
     );
+    return {
+      mediaId: media.id,
+    };
   }
 
   @Get('dpp/:upi/:dataFieldId/info')

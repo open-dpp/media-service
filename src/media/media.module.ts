@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { FilesService } from './infrastructure/files.service';
+import { MediaService } from './infrastructure/media.service';
 import { ConfigModule } from '@nestjs/config';
-import { FilesController } from './presentation/files.controller';
+import { MediaController } from './presentation/media.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MediaDbSchema, MediaDoc } from './infrastructure/media.schema';
 
@@ -15,7 +15,7 @@ import { MediaDbSchema, MediaDoc } from './infrastructure/media.schema';
       },
     ]),
   ],
-  providers: [FilesService],
-  controllers: [FilesController],
+  providers: [MediaService],
+  controllers: [MediaController],
 })
-export class FilesModule {}
+export class MediaModule {}

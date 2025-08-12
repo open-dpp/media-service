@@ -22,10 +22,11 @@ export async function bootstrap() {
     origin: '*',
   });
   app.use(
-    '/files/upload-dpp-file/:upi',
+    '/media/upload-dpp-file/:upi',
     bodyParser.urlencoded({ limit: '50mb', extended: true }),
   );
   const port = Number(configService.get('PORT', '3004'));
+  console.log(`Listening on port ${port}`);
   await app.listen(port, '0.0.0.0');
 }
 

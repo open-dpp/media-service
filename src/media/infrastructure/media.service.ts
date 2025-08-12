@@ -15,7 +15,7 @@ enum BucketDefaultPaths {
 }
 
 @Injectable()
-export class FilesService {
+export class MediaService {
   private client: Minio.Client;
   private readonly bucketNameDefault: string;
   private readonly bucketNameProfilePictures: string;
@@ -28,7 +28,8 @@ export class FilesService {
   ) {
     this.client = new Minio.Client({
       endPoint: configService.get<string>('S3_ENDPOINT'),
-      useSSL: true,
+      port: configService.get<number>('S3_PORT'),
+      useSSL: configService.get<string>('S3_SSL') === 'true',
       accessKey: configService.get<string>('S3_ACCESS_KEY'),
       secretKey: configService.get<string>('S3_SECRET_KEY'),
       region: 'nbg1',
@@ -53,7 +54,7 @@ export class FilesService {
   ) {
     const bucketExists = await this.client.bucketExists(bucketName);
     if (!bucketExists) {
-      throw new Error('Bucket does not exist');
+      throw new Error(`Bucket ${bucketName} does not exist`);
     }
     const objectName = this.buildBucketPath(remoteFileBaseName, remoteFolders);
     const uploadInfo = await this.client.putObject(
@@ -198,7 +199,6 @@ export class FilesService {
         runValidators: true,
       },
     );
-
     return this.convertToDomain(dataModelDoc);
   }
 

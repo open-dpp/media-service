@@ -7,7 +7,7 @@ import { HttpModule } from '@nestjs/axios';
 import { AuthModule } from './auth/auth.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { KeycloakAuthGuard } from './auth/keycloak-auth/keycloak-auth.guard';
-import { FilesModule } from './files/files.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { FilesModule } from './files/files.module';
     HttpModule,
     AuthModule,
     PermissionsModule,
-    FilesModule,
+    MediaModule,
   ],
   providers: [
     {
