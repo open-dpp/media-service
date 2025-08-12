@@ -63,10 +63,10 @@ export class MediaController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({
-            maxSize: 10 * 1024 * 1024 /* max 10MB */,
+            maxSize: 15 * 1024 * 1024 /* max 15MB */,
           }),
           new FileTypeValidator({
-            fileType: /(image\/(jpeg|jpg|png|heic|webp))$/,
+            fileType: /(image\/(jpeg|jpg|png|heic|webp)|application\/pdf)$/,
           }),
           new VirusScanFileValidator({ storageType: 'memory' }),
         ],
