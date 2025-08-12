@@ -44,3 +44,6 @@ services:
     image: ajilaag/clamav-rest
     ports:
       - "3310:9000"
+
+volumes:
+  minio_data:
