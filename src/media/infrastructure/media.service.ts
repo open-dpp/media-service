@@ -51,6 +51,8 @@ export class MediaService {
     buffer: Buffer,
     remoteFileBaseName: string,
     remoteFolders: string[] = [],
+    size: number,
+    mimeType: string,
   ) {
     const bucketExists = await this.client.bucketExists(bucketName);
     if (!bucketExists) {
@@ -61,6 +63,10 @@ export class MediaService {
       bucketName,
       objectName,
       buffer,
+      size,
+      {
+        'Content-Type': mimeType,
+      },
     );
     return {
       info: uploadInfo,
@@ -73,7 +79,14 @@ export class MediaService {
 
   async uploadProfilePicture(buffer: Buffer, userId: string) {
     // TODO: set profile picture for user
-    await this.uploadFile(this.bucketNameProfilePictures, buffer, userId);
+    await this.uploadFile(
+      this.bucketNameProfilePictures,
+      buffer,
+      userId,
+      [],
+      buffer.length,
+      'image/webp',
+    );
   }
 
   async uploadFileOfProductPassport(
@@ -84,6 +97,16 @@ export class MediaService {
     createdByUserId: string,
     ownedByOrganizationId: string,
   ) {
+    const findMedia = await this.mediaDoc.find({
+      dataFieldId,
+      uniqueProductIdentifier,
+    });
+    if (findMedia.length > 0) {
+      await this.mediaDoc.deleteMany({
+        dataFieldId,
+        uniqueProductIdentifier,
+      });
+    }
     const fileType = await fileTypeFromBuffer(buffer);
     let uploadBuffer: Buffer = buffer;
     if (fileType.mime.startsWith('image/')) {
@@ -97,6 +120,8 @@ export class MediaService {
       uploadBuffer,
       dataFieldId,
       [BucketDefaultPaths.PRODUCT_PASSPORT_FILES, uniqueProductIdentifier],
+      uploadBuffer.length,
+      fileType.mime,
     );
     const media = Media.create({
       createdByUserId,
@@ -229,5 +254,9 @@ export class MediaService {
     return mediaDocuments.map((mediaDocument) =>
       this.convertToDomain(mediaDocument),
     );
+  }
+
+  async removeById(id: string) {
+    await this.mediaDoc.deleteOne({ _id: id });
   }
 }
