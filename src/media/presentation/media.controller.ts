@@ -18,6 +18,7 @@ import { AuthRequest } from '../../auth/auth-request';
 import { MediaService } from '../infrastructure/media.service';
 import { Response } from 'express';
 import { Media } from '../domain/media';
+import { Public } from '../../auth/public/public.decorator';
 
 @Controller('media')
 export class MediaController {
@@ -94,6 +95,7 @@ export class MediaController {
   }
 
   @Get('dpp/:upi/:dataFieldId/info')
+  @Public()
   async getDppFileInfo(
     @Param('upi') upi: string,
     @Param('dataFieldId') dataFieldId: string,
@@ -102,6 +104,7 @@ export class MediaController {
   }
 
   @Get('dpp/:upi/:dataFieldId/download')
+  @Public()
   async streamDppFile(
     @Param('upi') upi: string,
     @Param('dataFieldId') dataFieldId: string,
