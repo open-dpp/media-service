@@ -119,17 +119,53 @@ export class MediaController {
       res.setHeader('Content-Type', result.media.mimeType);
       res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
       res.setHeader('Last-Modified', result.media.updatedAt.toUTCString());
-      // res.setHeader('Cache-Control', 'private, max-age=31536000');
+      res.setHeader('Cache-Control', 'private, max-age=31536000');
       result.stream.pipe(res);
-      result.stream.on('error', (error) => {
-        console.error('Stream error:', error);
+      result.stream.on('error', () => {
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to retrieve file' });
+        }
+      });
+    } catch {
+      res.status(404).json({ error: 'File not found' });
+    }
+  }
+
+  @Get('by-organization/:organizationId')
+  async getFileInfoByOrganization(
+    @Param('organizationId') organizationId: string,
+  ): Promise<Array<Media>> {
+    return this.filesService.findAllByOrganizationId(organizationId);
+  }
+
+  @Get(':id/download')
+  @Public()
+  async streamFile(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      const result = await this.filesService.getFilestreamById(id);
+      res.setHeader('Content-Type', result.media.mimeType);
+      res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+      res.setHeader('Last-Modified', result.media.updatedAt.toUTCString());
+      res.setHeader('Cache-Control', 'private, max-age=31536000');
+      result.stream.pipe(res);
+      result.stream.on('error', () => {
         if (!res.headersSent) {
           res.status(500).json({ error: 'Failed to retrieve file' });
         }
       });
     } catch (error) {
-      console.error('Error getting file:', error);
+      console.log(error);
       res.status(404).json({ error: 'File not found' });
     }
+  }
+
+  @Get(':id/info')
+  @Public()
+  async getMediaInfo(@Param('id') id: string): Promise<Media> {
+    return await this.filesService.findOneOrFail(id);
   }
 }

@@ -171,6 +171,15 @@ export class MediaService {
     };
   }
 
+  async getFilestreamById(id: string) {
+    const media = await this.findOneOrFail(id);
+    const stream = await this.getFilestreamOfMedia(media);
+    return {
+      stream,
+      media,
+    };
+  }
+
   async getFilestreamOfMedia(media: Media) {
     return this.getFileStream(media.bucket, media.objectName);
   }
@@ -258,5 +267,24 @@ export class MediaService {
 
   async removeById(id: string) {
     await this.mediaDoc.deleteOne({ _id: id });
+  }
+
+  async findAllByOrganizationId(organizationId: string) {
+    const mediaDocuments = await this.mediaDoc.find(
+      { ownedByOrganizationId: organizationId },
+      {
+        _id: true,
+        ownedByOrganizationId: true,
+        createdByUserId: true,
+        title: true,
+        description: true,
+        mimeType: true,
+        fileExtension: true,
+        size: true,
+      },
+    );
+    return mediaDocuments.map((mediaDocument) =>
+      this.convertToDomain(mediaDocument),
+    );
   }
 }
