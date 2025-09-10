@@ -109,12 +109,14 @@ export class MediaService {
       });
     }
     const fileType = await fileTypeFromBuffer(buffer);
+    let fileTypeMime = fileType.mime;
     let uploadBuffer: Buffer = buffer;
     if (fileType.mime.startsWith('image/')) {
       uploadBuffer = await sharp(buffer)
         .resize({ width: 480, height: 480, fit: 'cover' })
         .webp({ quality: 85 })
         .toBuffer();
+      fileTypeMime = 'image/webp';
     }
     const uploadInfo = await this.uploadFile(
       this.bucketNameDefault,
@@ -122,14 +124,14 @@ export class MediaService {
       dataFieldId,
       [BucketDefaultPaths.PRODUCT_PASSPORT_FILES, uniqueProductIdentifier],
       uploadBuffer.length,
-      fileType.mime,
+      fileTypeMime,
     );
     const media = Media.create({
       createdByUserId,
       ownedByOrganizationId,
       title: originalFilename,
       description: originalFilename,
-      mimeType: fileType.mime,
+      mimeType: fileTypeMime,
       fileExtension: fileType.ext,
       size: buffer.length,
       originalFilename,
@@ -151,12 +153,14 @@ export class MediaService {
     ownedByOrganizationId: string,
   ) {
     const fileType = await fileTypeFromBuffer(buffer);
+    let fileTypeMime = fileType.mime;
     let uploadBuffer: Buffer = buffer;
     if (fileType.mime.startsWith('image/')) {
       uploadBuffer = await sharp(buffer)
         .resize({ width: 480, height: 480, fit: 'cover' })
         .webp({ quality: 85 })
         .toBuffer();
+      fileTypeMime = 'image/webp';
     }
     const uuid = randomUUID();
     const uploadInfo = await this.uploadFile(
@@ -165,14 +169,14 @@ export class MediaService {
       uuid,
       [BucketDefaultPaths.PRODUCT_PASSPORT_FILES],
       uploadBuffer.length,
-      fileType.mime,
+      fileTypeMime,
     );
     const media = Media.create({
       createdByUserId,
       ownedByOrganizationId,
       title: originalFilename,
       description: originalFilename,
-      mimeType: fileType.mime,
+      mimeType: fileTypeMime,
       fileExtension: fileType.ext,
       size: buffer.length,
       originalFilename,
@@ -325,6 +329,15 @@ export class MediaService {
         mimeType: true,
         fileExtension: true,
         size: true,
+        bucket: true,
+        objectName: true,
+        eTag: true,
+        versionId: true,
+        createdAt: true,
+        updatedAt: true,
+        uniqueProductIdentifier: true,
+        dataFieldId: true,
+        originalFilename: true,
       },
     );
     return mediaDocuments.map((mediaDocument) =>

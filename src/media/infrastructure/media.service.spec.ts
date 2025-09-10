@@ -228,7 +228,7 @@ describe('MediaService', () => {
         'df-9',
         ['product-passport-files', 'upi-9'],
         sharpToBufferResult.length,
-        'image/png',
+        'image/webp',
       );
 
       // saved via save() -> findOneAndUpdate called with upsert
@@ -236,7 +236,7 @@ describe('MediaService', () => {
 
       expect(media).toBeInstanceOf(Media);
       expect(media.objectName).toContain('product-passport-files');
-      expect(media.mimeType).toBe('image/png');
+      expect(media.mimeType).toBe('image/webp');
     });
 
     it('does not optimize non-images', async () => {
@@ -398,6 +398,15 @@ describe('MediaService', () => {
           mimeType: true,
           fileExtension: true,
           size: true,
+          bucket: true,
+          createdAt: true,
+          dataFieldId: true,
+          eTag: true,
+          objectName: true,
+          uniqueProductIdentifier: true,
+          updatedAt: true,
+          versionId: true,
+          originalFilename: true,
         },
       );
       expect(list[0]).toBeInstanceOf(Media);
