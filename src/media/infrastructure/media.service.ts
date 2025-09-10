@@ -9,6 +9,7 @@ import { Model } from 'mongoose';
 import { MediaDoc } from './media.schema';
 import { Media } from '../domain/media';
 import { fileTypeFromBuffer } from './file-type-util';
+import { randomUUID } from 'crypto';
 
 enum BucketDefaultPaths {
   PRODUCT_PASSPORT_FILES = 'product-passport-files',
@@ -134,6 +135,49 @@ export class MediaService {
       originalFilename,
       uniqueProductIdentifier,
       dataFieldId,
+      bucket: uploadInfo.location.bucket,
+      objectName: uploadInfo.location.objectName,
+      eTag: uploadInfo.info.etag,
+      versionId: uploadInfo.info.versionId,
+    });
+    await this.save(media);
+    return media;
+  }
+
+  async uploadMedia(
+    originalFilename: string,
+    buffer: Buffer,
+    createdByUserId: string,
+    ownedByOrganizationId: string,
+  ) {
+    const fileType = await fileTypeFromBuffer(buffer);
+    let uploadBuffer: Buffer = buffer;
+    if (fileType.mime.startsWith('image/')) {
+      uploadBuffer = await sharp(buffer)
+        .resize({ width: 480, height: 480, fit: 'cover' })
+        .webp({ quality: 85 })
+        .toBuffer();
+    }
+    const uuid = randomUUID();
+    const uploadInfo = await this.uploadFile(
+      this.bucketNameDefault,
+      uploadBuffer,
+      uuid,
+      [BucketDefaultPaths.PRODUCT_PASSPORT_FILES],
+      uploadBuffer.length,
+      fileType.mime,
+    );
+    const media = Media.create({
+      createdByUserId,
+      ownedByOrganizationId,
+      title: originalFilename,
+      description: originalFilename,
+      mimeType: fileType.mime,
+      fileExtension: fileType.ext,
+      size: buffer.length,
+      originalFilename,
+      uniqueProductIdentifier: null,
+      dataFieldId: null,
       bucket: uploadInfo.location.bucket,
       objectName: uploadInfo.location.objectName,
       eTag: uploadInfo.info.etag,
