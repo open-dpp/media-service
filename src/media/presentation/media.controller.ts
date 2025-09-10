@@ -119,17 +119,90 @@ export class MediaController {
       res.setHeader('Content-Type', result.media.mimeType);
       res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
       res.setHeader('Last-Modified', result.media.updatedAt.toUTCString());
-      // res.setHeader('Cache-Control', 'private, max-age=31536000');
+      res.setHeader('Cache-Control', 'private, max-age=31536000');
       result.stream.pipe(res);
-      result.stream.on('error', (error) => {
-        console.error('Stream error:', error);
+      result.stream.on('error', () => {
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to retrieve file' });
+        }
+      });
+    } catch {
+      res.status(404).json({ error: 'File not found' });
+    }
+  }
+
+  @Get('by-organization/:organizationId')
+  async getFileInfoByOrganization(
+    @Param('organizationId') organizationId: string,
+  ): Promise<Array<Media>> {
+    return this.filesService.findAllByOrganizationId(organizationId);
+  }
+
+  @Get(':id/download')
+  @Public()
+  async streamFile(
+    @Param('id') id: string,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    try {
+      const result = await this.filesService.getFilestreamById(id);
+      res.setHeader('Content-Type', result.media.mimeType);
+      res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+      res.setHeader('Last-Modified', result.media.updatedAt.toUTCString());
+      res.setHeader('Cache-Control', 'private, max-age=31536000');
+      result.stream.pipe(res);
+      result.stream.on('error', () => {
         if (!res.headersSent) {
           res.status(500).json({ error: 'Failed to retrieve file' });
         }
       });
     } catch (error) {
-      console.error('Error getting file:', error);
+      console.log(error);
       res.status(404).json({ error: 'File not found' });
     }
+  }
+
+  @Get(':id/info')
+  @Public()
+  async getMediaInfo(@Param('id') id: string): Promise<Media> {
+    return await this.filesService.findOneOrFail(id);
+  }
+
+  @Post(':orgId')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+    }),
+  )
+  async uploadFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 15 * 1024 * 1024 /* max 15MB */,
+          }),
+          new FileTypeValidator({
+            fileType: /(image\/(jpeg|jpg|png|heic|webp)|application\/pdf)$/,
+          }),
+          new VirusScanFileValidator({ storageType: 'memory' }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Param('orgId') orgId: string,
+    @Req() req: AuthRequest,
+  ): Promise<{
+    mediaId: string;
+  }> {
+    const media = await this.filesService.uploadMedia(
+      file.originalname,
+      file.buffer,
+      req.authContext.keycloakUser.sub,
+      orgId,
+    );
+    return {
+      mediaId: media.id,
+    };
   }
 }

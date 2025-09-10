@@ -9,6 +9,7 @@ import { Model } from 'mongoose';
 import { MediaDoc } from './media.schema';
 import { Media } from '../domain/media';
 import { fileTypeFromBuffer } from './file-type-util';
+import { randomUUID } from 'crypto';
 
 enum BucketDefaultPaths {
   PRODUCT_PASSPORT_FILES = 'product-passport-files',
@@ -108,12 +109,14 @@ export class MediaService {
       });
     }
     const fileType = await fileTypeFromBuffer(buffer);
+    let fileTypeMime = fileType.mime;
     let uploadBuffer: Buffer = buffer;
     if (fileType.mime.startsWith('image/')) {
       uploadBuffer = await sharp(buffer)
         .resize({ width: 480, height: 480, fit: 'cover' })
         .webp({ quality: 85 })
         .toBuffer();
+      fileTypeMime = 'image/webp';
     }
     const uploadInfo = await this.uploadFile(
       this.bucketNameDefault,
@@ -121,19 +124,64 @@ export class MediaService {
       dataFieldId,
       [BucketDefaultPaths.PRODUCT_PASSPORT_FILES, uniqueProductIdentifier],
       uploadBuffer.length,
-      fileType.mime,
+      fileTypeMime,
     );
     const media = Media.create({
       createdByUserId,
       ownedByOrganizationId,
       title: originalFilename,
       description: originalFilename,
-      mimeType: fileType.mime,
+      mimeType: fileTypeMime,
       fileExtension: fileType.ext,
-      size: buffer.length,
+      size: uploadBuffer.length,
       originalFilename,
       uniqueProductIdentifier,
       dataFieldId,
+      bucket: uploadInfo.location.bucket,
+      objectName: uploadInfo.location.objectName,
+      eTag: uploadInfo.info.etag,
+      versionId: uploadInfo.info.versionId,
+    });
+    await this.save(media);
+    return media;
+  }
+
+  async uploadMedia(
+    originalFilename: string,
+    buffer: Buffer,
+    createdByUserId: string,
+    ownedByOrganizationId: string,
+  ) {
+    const fileType = await fileTypeFromBuffer(buffer);
+    let fileTypeMime = fileType.mime;
+    let uploadBuffer: Buffer = buffer;
+    if (fileType.mime.startsWith('image/')) {
+      uploadBuffer = await sharp(buffer)
+        .resize({ width: 480, height: 480, fit: 'cover' })
+        .webp({ quality: 85 })
+        .toBuffer();
+      fileTypeMime = 'image/webp';
+    }
+    const uuid = randomUUID();
+    const uploadInfo = await this.uploadFile(
+      this.bucketNameDefault,
+      uploadBuffer,
+      uuid,
+      [BucketDefaultPaths.PRODUCT_PASSPORT_FILES],
+      uploadBuffer.length,
+      fileTypeMime,
+    );
+    const media = Media.create({
+      createdByUserId,
+      ownedByOrganizationId,
+      title: originalFilename,
+      description: originalFilename,
+      mimeType: fileTypeMime,
+      fileExtension: fileType.ext,
+      size: uploadBuffer.length,
+      originalFilename,
+      uniqueProductIdentifier: null,
+      dataFieldId: null,
       bucket: uploadInfo.location.bucket,
       objectName: uploadInfo.location.objectName,
       eTag: uploadInfo.info.etag,
@@ -164,6 +212,15 @@ export class MediaService {
       dataFieldId,
       uniqueProductIdentifier,
     );
+    const stream = await this.getFilestreamOfMedia(media);
+    return {
+      stream,
+      media,
+    };
+  }
+
+  async getFilestreamById(id: string) {
+    const media = await this.findOneOrFail(id);
     const stream = await this.getFilestreamOfMedia(media);
     return {
       stream,
@@ -258,5 +315,33 @@ export class MediaService {
 
   async removeById(id: string) {
     await this.mediaDoc.deleteOne({ _id: id });
+  }
+
+  async findAllByOrganizationId(organizationId: string) {
+    const mediaDocuments = await this.mediaDoc.find(
+      { ownedByOrganizationId: organizationId },
+      {
+        _id: true,
+        ownedByOrganizationId: true,
+        createdByUserId: true,
+        title: true,
+        description: true,
+        mimeType: true,
+        fileExtension: true,
+        size: true,
+        bucket: true,
+        objectName: true,
+        eTag: true,
+        versionId: true,
+        createdAt: true,
+        updatedAt: true,
+        uniqueProductIdentifier: true,
+        dataFieldId: true,
+        originalFilename: true,
+      },
+    );
+    return mediaDocuments.map((mediaDocument) =>
+      this.convertToDomain(mediaDocument),
+    );
   }
 }
